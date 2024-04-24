@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ProductFruits } from 'react-product-fruits';
 
 const PROJECT_CODE = process.env.REACT_APP_PRODUCT_FRUIT_CODE;
@@ -48,6 +48,51 @@ export default function ProductFruitsIntegration({ userInfo }) {
   console.log('ProductFruitsIntegration render');
 
   return (
-    <ProductFruits workspaceCode={PROJECT_CODE} language="en" user={userInfo} />
+    <DelayedProductFruits workspaceCode={PROJECT_CODE} language="en" userInfo={userInfo} />
+  );
+}
+
+function DelayedProductFruits({ workspaceCode, userInfo }) {
+  const [showComponent, setShowComponent] = useState(true);
+  const firstRender = useRef(true);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+    } else {
+      setShowComponent(false);
+      try {
+        const timer = setTimeout(() => {
+          //@ts-expect-error
+          window?.productFruits?.services?.destroy()
+          //@ts-expect-error
+          delete window.productFruitsUser;
+          delete window.productFruits;
+          //@ts-expect-error
+          window.productFruitsUnmounted = false;
+        }, 500);
+        setTimeout(() => {
+          setShowComponent(true);
+        }, 500);
+        return () => {
+          clearTimeout(timer);
+        }
+      } catch { }
+
+    }
+  }, [workspaceCode]);
+
+  return (
+    <>
+      {showComponent && (
+        <ProductFruits
+          key={workspaceCode}
+          lifeCycle="neverUnmount"
+          workspaceCode={workspaceCode}
+          language="en"
+          user={userInfo}
+        />
+      )}
+    </>
   );
 }
